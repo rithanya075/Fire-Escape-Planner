@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Fire Escape Planner</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════ HEADER -->
+<header class="app-header">
+  <div class="header-left">
+    <div class="logo-flame">🔥</div>
+    <div>
+      <h1 class="app-title">FIRE<span>ESCAPE</span></h1>
+      <p class="app-sub">A* Pathfinding · ML Risk Prediction · Live Simulation</p>
+    </div>
+  </div>
+  <div class="header-badges">
+    <span class="badge badge-astar">A* ALGORITHM</span>
+    <span class="badge badge-ml">RANDOM FOREST ML</span>
+    <span class="badge badge-live" id="status-badge">● OFFLINE</span>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════ MAIN LAYOUT -->
+<main class="app-body">
+
+  <!-- ── LEFT SIDEBAR: Controls ── -->
+  <aside class="sidebar">
+
+    <section class="panel">
+      <h2 class="panel-title">⚙ SIMULATION</h2>
+      <div class="control-row">
+        <label>Grid Size</label>
+        <select id="grid-size">
+          <option value="15">15 × 15  (Fast)</option>
+          <option value="20" selected>20 × 20  (Default)</option>
+          <option value="25">25 × 25  (Detail)</option>
+        </select>
+      </div>
+      <div class="control-row">
+        <label>Fire Seed</label>
+        <input type="number" id="fire-seed" value="42" min="1" max="999">
+      </div>
+      <button class="btn btn-primary" id="btn-init" onclick="initSim()">
+        ▶ INITIALISE
+      </button>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">🖊 GRID EDITOR</h2>
+      <p class="hint">Click/drag on the grid to draw</p>
+      <div class="tool-grid">
+        <button class="tool-btn active" data-type="0" onclick="setTool(0)">
+          <span class="tool-icon empty-icon"></span>Empty
+        </button>
+        <button class="tool-btn" data-type="1" onclick="setTool(1)">
+          <span class="tool-icon wall-icon"></span>Wall
+        </button>
+        <button class="tool-btn" data-type="2" onclick="setTool(2)">
+          <span class="tool-icon fire-icon"></span>Fire
+        </button>
+        <button class="tool-btn" data-type="3" onclick="setTool(3)">
+          <span class="tool-icon exit-icon"></span>Exit
+        </button>
+        <button class="tool-btn" data-type="4" onclick="setTool(4)">
+          <span class="tool-icon person-icon"></span>Person
+        </button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">🔥 FIRE CONTROL</h2>
+      <button class="btn btn-danger" id="btn-step" onclick="stepOnce()" disabled>
+        ⚡ SPREAD FIRE (+1 Step)
+      </button>
+      <div class="auto-row">
+        <button class="btn btn-warning" id="btn-auto" onclick="toggleAuto()" disabled>
+          ▶ AUTO PLAY
+        </button>
+        <div class="speed-wrap">
+          <label>Speed</label>
+          <input type="range" id="speed" min="300" max="2000" value="900" step="100">
+        </div>
+      </div>
+      <button class="btn btn-ghost" onclick="resetSim()">↺ RESET</button>
+    </section>
+
+    <!-- Stats panel -->
+    <section class="panel stats-panel">
+      <h2 class="panel-title">📊 LIVE STATS</h2>
+      <div class="stat-row"><span>Step</span><span id="stat-step" class="stat-val">—</span></div>
+      <div class="stat-row"><span>Path Cost</span><span id="stat-cost" class="stat-val">—</span></div>
+      <div class="stat-row"><span>Path Length</span><span id="stat-len" class="stat-val">—</span></div>
+      <div class="stat-row"><span>Best Exit</span><span id="stat-goal" class="stat-val">—</span></div>
+      <div class="stat-row"><span>Exits Reachable</span><span id="stat-exits" class="stat-val">—</span></div>
+      <div class="stat-row"><span>A* Time</span><span id="stat-ms" class="stat-val">—</span></div>
+      <div class="stat-row"><span>Nodes Expanded</span><span id="stat-nodes" class="stat-val">—</span></div>
+      <div class="stat-row fire-row"><span>🔥 Fire Cells</span><span id="stat-fire" class="stat-val fire-val">—</span></div>
+      <div class="stat-row fire-row"><span>Coverage</span><span id="stat-cov" class="stat-val fire-val">—</span></div>
+    </section>
+
+  </aside>
+
+  <!-- ── CENTRE: Grid Canvas ── -->
+  <div class="grid-wrap">
+    <div class="grid-header">
+      <span id="grid-label">Building Layout  ·  Click grid to edit</span>
+      <div class="legend">
+        <span class="leg-item"><span class="leg-dot" style="background:#e8e4dc"></span>Empty</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#1a2332"></span>Wall</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#ff4500"></span>Fire</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#00c87a"></span>Exit</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#3d9eff"></span>Person</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#ffd700; border:1px solid #aaa"></span>Path</span>
+      </div>
+    </div>
+
+    <!-- Overlay shown before init -->
+    <div class="grid-overlay" id="grid-overlay">
+      <div class="overlay-content">
+        <div class="overlay-flame">🔥</div>
+        <p>Click <strong>INITIALISE</strong> to begin</p>
+      </div>
+    </div>
+
+    <canvas id="grid-canvas"></canvas>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <!-- ── RIGHT SIDEBAR: Charts ── -->
+  <aside class="sidebar sidebar-right">
+
+    <section class="panel">
+      <h2 class="panel-title">📈 PATH COST</h2>
+      <canvas id="chart-cost" height="140"></canvas>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">🔥 FIRE COVERAGE</h2>
+      <canvas id="chart-fire" height="140"></canvas>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">🧠 ML RISK LEGEND</h2>
+      <div class="risk-gradient"></div>
+      <div class="risk-labels">
+        <span>Safe (0.0)</span><span>Max Risk (1.0)</span>
+      </div>
+      <p class="hint" style="margin-top:8px">
+        Risk overlay (red tint) on grid shows ML prediction.
+        A* avoids high-risk cells by treating them as expensive to enter.
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title">ℹ HOW IT WORKS</h2>
+      <div class="how-item"><span class="how-num">1</span><span>ML model predicts risk score per cell using distance, temp & smoke</span></div>
+      <div class="how-item"><span class="how-num">2</span><span>A* uses <code>f = g + h</code> where g includes ML risk weight</span></div>
+      <div class="how-item"><span class="how-num">3</span><span>Fire spreads probabilistically each step</span></div>
+      <div class="how-item"><span class="how-num">4</span><span>Path is replanned dynamically after every fire step</span></div>
+    </section>
+
+  </aside>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
