@@ -212,30 +212,6 @@ Smoke spreads with 0.4 coefficient + 0.85 decay per step.
 
 ---
 
-## 🐙 GitHub Setup (Step by Step)
-
-1. Create a new repo at https://github.com/new
-   - Name: `ai-fire-escape-planner`
-   - Public, no README (we have one)
-
-2. In your project folder:
-```bash
-git init
-git add .
-git commit -m "Initial commit: AI Fire Escape Planner"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/ai-fire-escape-planner.git
-git push -u origin main
-```
-
-3. Add a `.gitignore`:
-```
-venv/
-output/
-__pycache__/
-*.pyc
-.DS_Store
-```
 
 ---
 
